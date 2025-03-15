@@ -1,0 +1,87 @@
+/* Custom styles for Augur Dashboard */
+:root {
+    --primary-color: #0066cc;
+    --secondary-color: #f8f9fa;
+    --accent-color: #ff9900;
+    --text-color: #333;
+    --light-text: #6c757d;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f7fa;
+    color: var(--text-color);
+}
+
+.navbar {
+    background-color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    color: white !important;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    background-color: var(--secondary-color);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-weight: 600;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.metric-label {
+    color: var(--light-text);
+    font-size: 0.9rem;
+}
+
+.distributor-card {
+    cursor: pointer;
+}
+
+.distributor-card.selected {
+    border: 2px solid var(--accent-color);
+}
+
+.chart-container {
+    height: 300px;
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+}
+
+.spinner-border {
+    color: var(--primary-color);
+}
+
+.forecast-up {
+    color: #28a745;
+}
+
+.forecast-down {
+    color: #dc3545;
+}
+
+.forecast-neutral {
+    color: #6c757d;
+}

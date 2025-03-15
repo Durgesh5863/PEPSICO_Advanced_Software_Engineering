@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Augur - Supply Chain Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --secondary-color: #f8f9fa;
+            --accent-color: #ff9900;
+            --text-color: #333;
+            --light-text: #6c757d;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: var(--text-color);
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: white !important;
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            background-color: var(--secondary-color);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .metric-label {
+            color: var(--light-text);
+            font-size: 0.9rem;
+        }
+        
+        .distributor-card {
+            cursor: pointer;
+        }
+        
+        .distributor-card.selected {
+            border: 2px solid var(--accent-color);
+        }
+        
+        .chart-container {
+            height: 300px;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+        
+        .spinner-border {
+            color: var(--primary-color);
+        }
+        
+        .forecast-up {
+            color: #28a745;
+        }
+        
+        .forecast-down {
+            color: #dc3545;
+        }
+        
+        .forecast-neutral {
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>Augur Dashboard
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/">Admin</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Distributor Metrics</h2>
+                <p class="text-muted">Real-time insights into distributor shipment data and forecasts</p>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Distributors Overview</span>
+                        <div>
+                            <input type="text" id="searchDistributor" class="form-control form-control-sm" placeholder="Search distributors...">
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="distributorsContainer" class="row">
+                            <div class="loading">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Sample data - would be replaced with API calls in production
+        const distributors = [
+            { id: 1, name: 'Northeast Distributors', ytdAvg: 1250, lastMonth: 1300, forecast: 1350 },
+            { id: 2, name: 'Southern Supply Chain', ytdAvg: 980, lastMonth: 1050, forecast: 1100 },
+            { id: 3, name: 'Midwest Distribution', ytdAvg: 1500, lastMonth: 1450, forecast: 1400 },
+            { id: 4, name: 'Western Logistics', ytdAvg: 2100, lastMonth: 2200, forecast: 2300 },
+            { id: 5, name: 'Central Shipping', ytdAvg: 1750, lastMonth: 1700, forecast: 1800 },
+            { id: 6, name: 'Pacific Northwest Supply', ytdAvg: 1100, lastMonth: 1150, forecast: 1200 }
+        ];
+        
+        // Monthly shipment history data for charts
+        const monthlyData = {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            datasets: [
+                {
+                    label: 'Monthly Shipments',
+                    data: [1100, 1200, 1300, 1250, 1400, 1350, 1300, 1450, 1500, 1550, 1600, 1650],
+                    backgroundColor: 'rgba(0, 102, 204, 0.2)',
+                    borderColor: 'rgba(0, 102, 204, 1)',
+                    borderWidth: 2,
+                    tension: 0.3
+                }
+            ]
+        };
+        
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Remove loading indicators
+            document.querySelectorAll('.loading').forEach(loader => {
+                loader.style.display = 'none';
+            });
+            
+            // Populate distributors
+            const distributorsContainer = document.getElementById('distributorsContainer');
+            distributors.forEach(distributor => {
+                const card = createDistributorCard(distributor);
+                distributorsContainer.appendChild(card);
+            });
+            
+            // Initialize chart
+            const ctx = document.getElementById('shipmentChart').getContext('2d');
+            const shipmentChart = new Chart(ctx, {
+                type: 'line',
+                data: monthlyData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+            
+            // Search functionality
+            const searchInput = document.getElementById('searchDistributor');
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const cards = distributorsContainer.querySelectorAll('.distributor-card');
+                
+                cards.forEach(card => {
+                    const distributorName = card.querySelector('.distributor-name').textContent.toLowerCase();
+                    if (distributorName.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Select first distributor by default
+            const firstCard = distributorsContainer.querySelector('.distributor-card');
+            if (firstCard) {
+                firstCard.click();
+            }
+        });
+        
+        // Create a card for a distributor
+        function createDistributorCard(distributor) {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 mb-3';
+            
+            const card = document.createElement('div');
+            card.className = 'card distributor-card';
+            card.dataset.id = distributor.id;
+            
+            const cardBody = document.createElement('div');
+            cardBody.className = 'card-body';
+            
+            const nameElement = document.createElement('h5');
+            nameElement.className = 'card-title distributor-name';
+            nameElement.textContent = distributor.name;
+            
+            const metricsDiv = document.createElement('div');
+            metricsDiv.className = 'row mt-3';
+            
+            // YTD Average
+            const ytdCol = document.createElement('div');
+            ytdCol.className = 'col-4';
+            ytdCol.innerHTML = `
+                <div class="metric-value">${distributor.ytdAvg}</div>
+                <div class="metric-label">YTD Avg</div>
+            `;
+            
+            // Last Month
+            const lastMonthCol = document.createElement('div');
+            lastMonthCol.className = 'col-4';
+            lastMonthCol.innerHTML = `
+                <div class="metric-value">${distributor.lastMonth}</div>
+                <div class="metric-label">Last Month</div>
+            `;
+            
+            // Forecast
+            const forecastCol = document.createElement('div');
+            forecastCol.className = 'col-4';
+            
+            // Determine if forecast is up or down compared to last month
+            let forecastIconClass = 'forecast-neutral';
+            let forecastIcon = 'fa-equals';
+            
+            if (distributor.forecast > distributor.lastMonth) {
+                forecastIconClass = 'forecast-up';
+                forecastIcon = 'fa-arrow-up';
+            } else if (distributor.forecast < distributor.lastMonth) {
+                forecastIconClass = 'forecast-down';
+                forecastIcon = 'fa-arrow-down';
+            }
+            
+            forecastCol.innerHTML = `
+                <div class="metric-value">${distributor.forecast}</div>
+                <div class="metric-label">Forecast <i class="fas ${forecastIcon} ${forecastIconClass}"></i></div>
+            `;
+            
+            // Add event listener to select distributor
+            card.addEventListener('click', function() {
+                // Remove selected class from all cards
+                document.querySelectorAll('.distributor-card').forEach(c => {
+                    c.classList.remove('selected');
+                });
+                
+                // Add selected class to this card
+                this.classList.add('selected');
+                
+                // Show loading indicators
+                document.getElementById('forecastContainer').innerHTML = `
+                    <div class="loading">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                `;
+                
+                // Fetch detailed data for this distributor
+                fetch(`/api/distributors/${distributor.id}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update forecast details
+                        updateForecastDetails(data);
+                        
+                        // Update chart with monthly data
+                        updateChart(data.monthlyData);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching distributor details:', error);
+                        document.getElementById('forecastContainer').innerHTML = '<p class="text-danger">Error loading distributor details. Please try again later.</p>';
+                    });
+            });
+            
+            metricsDiv.appendChild(ytdCol);
+            metricsDiv.appendChild(lastMonthCol);
+            metricsDiv.appendChild(forecastCol);
+            
+            cardBody.appendChild(nameElement);
+            cardBody.appendChild(metricsDiv);
+            card.appendChild(cardBody);
+            col.appendChild(card);
+            
+            return col;
+        }
+        
+        // Update forecast details
+        function updateForecastDetails(distributor) {
+            const forecastContainer = document.getElementById('forecastContainer');
+            
+            // Calculate percentage change
+            const percentChange = ((distributor.forecast - distributor.lastMonth) / distributor.lastMonth * 100).toFixed(1);
+            const changeDirection = percentChange >= 0 ? 'increase' : 'decrease';
+            const changeClass = percentChange >= 0 ? 'forecast-up' : 'forecast-down';
+            
+            forecastContainer.innerHTML = `
+                <h3 class="mb-4">${distributor.name}</h3>
+                <div class="row mb-3">
+                    <div class="col">
+                        <h4>Forecast Analysis</h4>
+                        <p>The forecast for next month is <strong>${distributor.forecast}</strong> units, which is a 
+                        <span class="${changeClass}"><strong>${Math.abs(percentChange)}%</strong> ${changeDirection}</span> 
+                        from last month's shipment of <strong>${distributor.lastMonth}</strong> units.</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">YTD Average</h5>
+                                <div class="metric-value">${distributor.ytdAvg}</div>
+                                <div class="metric-label">units</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Forecast</h5>
+                                <div class="metric-value">${distributor.forecast}</div>
+                                <div class="metric-label">units <i class="fas ${forecastIcon} ${forecastIconClass}"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Update chart with monthly data
+        function updateChart(monthlyData) {
+            // Format the data for Chart.js
+            const labels = monthlyData.map(item => {
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                return monthNames[item.month - 1];
+            });
+            
+            const data = monthlyData.map(item => item.quantity);
+            
+            const chart = Chart.getChart('shipmentChart');
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = data;
+            chart.update();
+        }
+    </script>
+</body>
+</html>
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --secondary-color: #f8f9fa;
+            --accent-color: #ff9900;
+            --text-color: #333;
+            --light-text: #6c757d;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: var(--text-color);
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: white !important;
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            background-color: var(--secondary-color);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .metric-label {
+            color: var(--light-text);
+            font-size: 0.9rem;
+        }
+        
+        .distributor-card {
+            cursor: pointer;
+        }
+        
+        .distributor-card.selected {
+            border: 2px solid var(--accent-color);
+        }
+        
+        .chart-container {
+            height: 300px;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+        
+        .spinner-border {
+            color: var(--primary-color);
+        }
+        
+        .forecast-up {
+            color: #28a745;
+        }
+        
+        .forecast-down {
+            color: #dc3545;
+        }
+        
+        .forecast-neutral {
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>Augur Dashboard
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/">Admin</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Distributor Metrics</h2>
+                <p class="text-muted">Real-time insights into distributor shipment data and forecasts</p>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Distributors Overview</span>
+                        <div>
+                            <input type="text" id="searchDistributor" class="form-control form-control-sm" placeholder="Search distributors...">
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="distributorsContainer" class="row">
+                            <div class="loading">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Fetch distributors data from API
+        let distributors = [];
+        let monthlyData = {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Monthly Shipments',
+                    data: [],
+                    backgroundColor: 'rgba(0, 102, 204, 0.2)',
+                    borderColor: 'rgba(0, 102, 204, 1)',
+                    borderWidth: 2,
+                    tension: 0.3
+                }
+            ]
+        };
+        
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show loading indicators
+            document.querySelectorAll('.loading').forEach(loader => {
+                loader.style.display = 'flex';
+            });
+            
+            // Fetch distributors data
+            fetch('/api/distributors/')
+                .then(response => response.json())
+                .then(data => {
+                    distributors = data;
+                    
+                    // Hide loading indicators
+                    document.querySelectorAll('.loading').forEach(loader => {
+                        loader.style.display = 'none';
+                    });
+                    
+                    // Populate distributors
+                    const distributorsContainer = document.getElementById('distributorsContainer');
+                    distributors.forEach(distributor => {
+                        const card = createDistributorCard(distributor);
+                        distributorsContainer.appendChild(card);
+                    });
+                    
+                    // Select first distributor by default
+                    const firstCard = distributorsContainer.querySelector('.distributor-card');
+                    if (firstCard) {
+                        firstCard.click();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching distributors:', error);
+                    document.querySelectorAll('.loading').forEach(loader => {
+                        loader.style.display = 'none';
+                    });
+                    // Show error message
+                    const distributorsContainer = document.getElementById('distributorsContainer');
+                    distributorsContainer.innerHTML = '<div class="col-12 text-center"><p class="text-danger">Error loading distributors. Please try again later.</p></div>';
+                });
+            
+            // Initialize chart
+            // Initialize chart
+                const ctx = document.getElementById('shipmentChart').getContext('2d');
+                const shipmentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: 'Monthly Shipments',
+                                data: [],
+                                backgroundColor: 'rgba(0, 102, 204, 0.2)',
+                                borderColor: 'rgba(0, 102, 204, 1)',
+                                borderWidth: 2,
+                                tension: 0.3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
+            
+            // Search functionality
+            const searchInput = document.getElementById('searchDistributor');
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const cards = distributorsContainer.querySelectorAll('.distributor-card');
+                
+                cards.forEach(card => {
+                    const distributorName = card.querySelector('.distributor-name').textContent.toLowerCase();
+                    if (distributorName.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Select first distributor by default
+            const firstCard = distributorsContainer.querySelector('.distributor-card');
+            if (firstCard) {
+                firstCard.click();
+            }
+        });
+        
+        // Create a card for a distributor
+        function createDistributorCard(distributor) {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 mb-3';
+            
+            const card = document.createElement('div');
+            card.className = 'card distributor-card';
+            card.dataset.id = distributor.id;
+            
+            const cardBody = document.createElement('div');
+            cardBody.className = 'card-body';
+            
+            const nameElement = document.createElement('h5');
+            nameElement.className = 'card-title distributor-name';
+            nameElement.textContent = distributor.name;
+            
+            const metricsDiv = document.createElement('div');
+            metricsDiv.className = 'row mt-3';
+            
+            // YTD Average
+            const ytdCol = document.createElement('div');
+            ytdCol.className = 'col-4';
+            ytdCol.innerHTML = `
+                <div class="metric-value">${distributor.ytdAvg}</div>
+                <div class="metric-label">YTD Avg</div>
+            `;
+            
+            // Last Month
+            const lastMonthCol = document.createElement('div');
+            lastMonthCol.className = 'col-4';
+            lastMonthCol.innerHTML = `
+                <div class="metric-value">${distributor.lastMonth}</div>
+                <div class="metric-label">Last Month</div>
+            `;
+            
+            // Forecast
+            const forecastCol = document.createElement('div');
+            forecastCol.className = 'col-4';
+            
+            // Determine if forecast is up or down compared to last month
+            let forecastIconClass = 'forecast-neutral';
+            let forecastIcon = 'fa-equals';
+            
+            if (distributor.forecast > distributor.lastMonth) {
+                forecastIconClass = 'forecast-up';
+                forecastIcon = 'fa-arrow-up';
+            } else if (distributor.forecast < distributor.lastMonth) {
+                forecastIconClass = 'forecast-down';
+                forecastIcon = 'fa-arrow-down';
+            }
+            
+            forecastCol.innerHTML = `
+                <div class="metric-value">${distributor.forecast}</div>
+                <div class="metric-label">Forecast <i class="fas ${forecastIcon} ${forecastIconClass}"></i></div>
+            `;
+            
+            // Add event listener to select distributor
+            card.addEventListener('click', function() {
+                // Remove selected class from all cards
+                document.querySelectorAll('.distributor-card').forEach(c => {
+                    c.classList.remove('selected');
+                });
+                
+                // Add selected class to this card
+                this.classList.add('selected');
+                
+                // Update forecast container
+                updateForecastDetails(distributor);
+                
+                // Update chart data (in a real app, this would fetch data for the specific distributor)
+                // For demo, we'll just randomize the data
+                const chart = Chart.getChart('shipmentChart');
+                const newData = monthlyData.datasets[0].data.map(val => {
+                    return val * (0.9 + Math.random() * 0.2); // Random variation of ±10%
+                });
+                chart.data.datasets[0].data = newData;
+                chart.update();
+            });
+            
+            metricsDiv.appendChild(ytdCol);
+            metricsDiv.appendChild(lastMonthCol);
+            metricsDiv.appendChild(forecastCol);
+            
+            cardBody.appendChild(nameElement);
+            cardBody.appendChild(metricsDiv);
+            card.appendChild(cardBody);
+            col.appendChild(card);
+            
+            return col;
+        }
+        
+        // Update forecast details
+        function updateForecastDetails(distributor) {
+            const forecastContainer = document.getElementById('forecastContainer');
+            
+            // Calculate percentage change
+            const percentChange = ((distributor.forecast - distributor.lastMonth) / distributor.lastMonth * 100).toFixed(1);
+            const changeDirection = percentChange >= 0 ? 'increase' : 'decrease';
+            const changeClass = percentChange >= 0 ? 'forecast-up' : 'forecast-down';
+            
+            forecastContainer.innerHTML = `
+                <h3 class="mb-4">${distributor.name}</h3>
+                <div class="row mb-3">
+                    <div class="col">
+                        <h4>Forecast Analysis</h4>
+                        <p>The forecast for next month is <strong>${distributor.forecast}</strong> units, which is a 
+                        <span class="${changeClass}"><strong>${Math.abs(percentChange)}%</strong> ${changeDirection}</span> 
+                        from last month's shipment of <strong>${distributor.lastMonth}</strong> units.</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">YTD Average</h5>
+                                <div class="metric-value">${distributor.ytdAvg}</div>
+                                <div class="metric-label">units</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Forecast</h5>
+                                <div class="metric-value">${distributor.forecast}</div>
+                                <div class="metric-label">units <i class="fas ${forecastIcon} ${forecastIconClass}"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
