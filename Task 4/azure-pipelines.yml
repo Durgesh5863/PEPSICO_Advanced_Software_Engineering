@@ -1,0 +1,126 @@
+# Azure DevOps Pipeline for Augur Frontend
+# This pipeline builds and deploys the Augur frontend to Azure App Service
+
+trigger:
+  branches:
+    include:
+    - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Pipeline variables
+  pythonVersion: '3.10'
+  azureServiceConnection: 'AugurAzureServiceConnection'
+  webAppName: 'augur-dashboard'
+  resourceGroupName: 'augur-resources'
+  # Environment-specific variables
+  - name: environmentName
+    value: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+  - name: deploymentSlot
+    ${{ if eq(variables['environmentName'], true) }}:
+      value: 'production'
+    ${{ if eq(variables['environmentName'], false) }}:
+      value: 'staging'
+
+stages:
+- stage: Build
+  displayName: 'Build Stage'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build Job'
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(pythonVersion)'
+        addToPath: true
+      displayName: 'Use Python $(pythonVersion)'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      workingDirectory: '$(System.DefaultWorkingDirectory)/Task 3'
+      displayName: 'Install dependencies'
+
+    - script: |
+        python -m pip install pytest pytest-django
+        pytest
+      workingDirectory: '$(System.DefaultWorkingDirectory)/Task 3'
+      displayName: 'Run tests'
+      continueOnError: true
+
+    - script: |
+        python manage.py collectstatic --noinput
+      workingDirectory: '$(System.DefaultWorkingDirectory)/Task 3'
+      displayName: 'Collect static files'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)/Task 3'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Archive files'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+      displayName: 'Publish artifacts'
+
+- stage: Deploy
+  displayName: 'Deploy Stage'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeployJob
+    displayName: 'Deploy Job'
+    environment: '$(deploymentSlot)'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureRmWebAppDeployment@4
+            inputs:
+              ConnectionType: 'AzureRM'
+              azureSubscription: '$(azureServiceConnection)'
+              appType: 'webApp'
+              WebAppName: '$(webAppName)'
+              deployToSlotOrASE: true
+              ResourceGroupName: '$(resourceGroupName)'
+              SlotName: '$(deploymentSlot)'
+              packageForLinux: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
+              enableCustomDeployment: true
+              DeploymentType: 'webDeploy'
+              TakeAppOfflineFlag: true
+              RenameFilesFlag: true
+            displayName: 'Deploy to Azure App Service'
+
+          - task: AzureAppServiceSettings@1
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              appName: '$(webAppName)'
+              resourceGroupName: '$(resourceGroupName)'
+              slotName: '$(deploymentSlot)'
+              appSettings: |
+                [
+                  {
+                    "name": "DJANGO_SETTINGS_MODULE",
+                    "value": "augur_dashboard.settings",
+                    "slotSetting": false
+                  },
+                  {
+                    "name": "DEBUG",
+                    "value": "${{ if eq(variables['deploymentSlot'], 'production') }}:False${{ else }}:True",
+                    "slotSetting": true
+                  },
+                  {
+                    "name": "ALLOWED_HOSTS",
+                    "value": "*.azurewebsites.net",
+                    "slotSetting": false
+                  }
+                ]
+            displayName: 'Configure App Service Settings'
