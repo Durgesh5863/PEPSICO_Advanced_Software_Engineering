@@ -1,0 +1,77 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#f8f9fa" />
+  <text x="400" y="30" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold">Augur: Predictive Supply Chain Management System</text>
+
+  <!-- Frontend Layer -->
+  <rect x="50" y="80" width="700" height="80" rx="5" fill="#e6f7ff" stroke="#1890ff" stroke-width="2" />
+  <text x="400" y="110" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Frontend Layer</text>
+  <rect x="80" y="120" width="180" height="30" rx="5" fill="#ffffff" stroke="#1890ff" stroke-width="1" />
+  <text x="170" y="140" font-family="Arial" font-size="14" text-anchor="middle">Dashboard UI (SPA)</text>
+  <rect x="280" y="120" width="180" height="30" rx="5" fill="#ffffff" stroke="#1890ff" stroke-width="1" />
+  <text x="370" y="140" font-family="Arial" font-size="14" text-anchor="middle">Authentication</text>
+  <rect x="480" y="120" width="240" height="30" rx="5" fill="#ffffff" stroke="#1890ff" stroke-width="1" />
+  <text x="600" y="140" font-family="Arial" font-size="14" text-anchor="middle">Data Visualization Components</text>
+
+  <!-- API Gateway -->
+  <rect x="200" y="180" width="400" height="50" rx="5" fill="#fff2e8" stroke="#fa8c16" stroke-width="2" />
+  <text x="400" y="210" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">API Gateway</text>
+
+  <!-- Backend Services -->
+  <rect x="50" y="250" width="700" height="100" rx="5" fill="#f6ffed" stroke="#52c41a" stroke-width="2" />
+  <text x="400" y="280" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Backend Services</text>
+  <rect x="80" y="300" width="150" height="30" rx="5" fill="#ffffff" stroke="#52c41a" stroke-width="1" />
+  <text x="155" y="320" font-family="Arial" font-size="14" text-anchor="middle">Distributor Service</text>
+  <rect x="250" y="300" width="150" height="30" rx="5" fill="#ffffff" stroke="#52c41a" stroke-width="1" />
+  <text x="325" y="320" font-family="Arial" font-size="14" text-anchor="middle">Metrics Service</text>
+  <rect x="420" y="300" width="150" height="30" rx="5" fill="#ffffff" stroke="#52c41a" stroke-width="1" />
+  <text x="495" y="320" font-family="Arial" font-size="14" text-anchor="middle">Forecast Service</text>
+  <rect x="590" y="300" width="150" height="30" rx="5" fill="#ffffff" stroke="#52c41a" stroke-width="1" />
+  <text x="665" y="320" font-family="Arial" font-size="14" text-anchor="middle">Data Processing</text>
+
+  <!-- Data Layer -->
+  <rect x="50" y="370" width="700" height="80" rx="5" fill="#f9f0ff" stroke="#722ed1" stroke-width="2" />
+  <text x="400" y="400" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Data Layer</text>
+  <rect x="80" y="410" width="200" height="30" rx="5" fill="#ffffff" stroke="#722ed1" stroke-width="1" />
+  <text x="180" y="430" font-family="Arial" font-size="14" text-anchor="middle">Azure Cosmos DB</text>
+  <rect x="300" y="410" width="200" height="30" rx="5" fill="#ffffff" stroke="#722ed1" stroke-width="1" />
+  <text x="400" y="430" font-family="Arial" font-size="14" text-anchor="middle">Azure Blob Storage</text>
+  <rect x="520" y="410" width="200" height="30" rx="5" fill="#ffffff" stroke="#722ed1" stroke-width="1" />
+  <text x="620" y="430" font-family="Arial" font-size="14" text-anchor="middle">Azure Cache for Redis</text>
+
+  <!-- Integration Layer -->
+  <rect x="50" y="470" width="700" height="80" rx="5" fill="#fff0f6" stroke="#eb2f96" stroke-width="2" />
+  <text x="400" y="500" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Integration Layer</text>
+  <rect x="150" y="510" width="200" height="30" rx="5" fill="#ffffff" stroke="#eb2f96" stroke-width="1" />
+  <text x="250" y="530" font-family="Arial" font-size="14" text-anchor="middle">Azure Service Bus</text>
+  <rect x="450" y="510" width="200" height="30" rx="5" fill="#ffffff" stroke="#eb2f96" stroke-width="1" />
+  <text x="550" y="530" font-family="Arial" font-size="14" text-anchor="middle">Event Hub</text>
+
+  <!-- Arrows -->
+  <!-- Frontend to API Gateway -->
+  <line x1="400" y1="160" x2="400" y2="180" stroke="#000000" stroke-width="2" marker-end="url(#arrowhead)" />
+  <!-- API Gateway to Backend -->
+  <line x1="400" y1="230" x2="400" y2="250" stroke="#000000" stroke-width="2" marker-end="url(#arrowhead)" />
+  <!-- Backend to Data Layer -->
+  <line x1="400" y1="350" x2="400" y2="370" stroke="#000000" stroke-width="2" marker-end="url(#arrowhead)" />
+  <!-- Data Layer to Integration Layer -->
+  <line x1="400" y1="450" x2="400" y2="470" stroke="#000000" stroke-width="2" marker-end="url(#arrowhead)" />
+  <!-- Integration Layer to Backend (feedback loop) -->
+  <path d="M 50 510 C 20 510 20 300 50 300" fill="none" stroke="#000000" stroke-width="2" marker-end="url(#arrowhead)" />
+
+  <!-- External Systems -->
+  <rect x="50" y="570" width="300" height="30" rx="5" fill="#f0f0f0" stroke="#000000" stroke-width="1" />
+  <text x="200" y="590" font-family="Arial" font-size="14" text-anchor="middle">Existing Predictive Shipping Pipeline</text>
+  <line x1="200" y1="570" x2="200" y2="550" stroke="#000000" stroke-width="2" marker-end="url(#arrowhead)" />
+
+  <!-- Arrow Definitions -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#000000" />
+    </marker>
+  </defs>
+
+  <!-- Legend -->
+  <rect x="600" y="560" width="150" height="30" rx="5" fill="#ffffff" stroke="#000000" stroke-width="1" />
+  <text x="675" y="580" font-family="Arial" font-size="14" text-anchor="middle">Azure Deployment</text>
+</svg>
