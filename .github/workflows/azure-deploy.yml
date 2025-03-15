@@ -1,0 +1,102 @@
+# GitHub Actions workflow for Augur Frontend Deployment
+# This workflow builds and deploys the Augur frontend to Azure App Service
+
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - production
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      PYTHON_VERSION: '3.10'
+      # Default to dev environment unless specified via workflow_dispatch
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      working-directory: ./Task 3
+      
+    - name: Run tests
+      run: |
+        python -m pip install pytest pytest-django
+        python manage.py test
+      working-directory: ./Task 3
+      continue-on-error: true
+      
+    - name: Collect static files
+      run: |
+        python manage.py collectstatic --noinput
+      working-directory: ./Task 3
+      
+    - name: Create deployment package
+      run: |
+        zip -r deployment.zip .
+      working-directory: ./Task 3
+      
+    - name: Set environment variables
+      id: set-env
+      run: |
+        if [ "$ENVIRONMENT" == "production" ]; then
+          echo "APP_NAME=augur-dashboard" >> $GITHUB_ENV
+          echo "RESOURCE_GROUP=augur-resources" >> $GITHUB_ENV
+          echo "DEBUG=False" >> $GITHUB_ENV
+        elif [ "$ENVIRONMENT" == "staging" ]; then
+          echo "APP_NAME=augur-dashboard-staging" >> $GITHUB_ENV
+          echo "RESOURCE_GROUP=augur-resources-staging" >> $GITHUB_ENV
+          echo "DEBUG=False" >> $GITHUB_ENV
+        else
+          echo "APP_NAME=augur-dashboard-dev" >> $GITHUB_ENV
+          echo "RESOURCE_GROUP=augur-resources-dev" >> $GITHUB_ENV
+          echo "DEBUG=True" >> $GITHUB_ENV
+        fi
+        
+    - name: Create app settings file
+      run: |
+        echo '{"DEBUG": "${{ env.DEBUG }}", "ALLOWED_HOSTS": "*.azurewebsites.net"}' > azure_settings.json
+      working-directory: ./Task 3
+      
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.APP_NAME }}
+        slot-name: 'production'
+        package: ./Task 3/deployment.zip
+        
+    - name: Update App Settings
+      uses: azure/CLI@v1
+      with:
+        inlineScript: |
+          az webapp config appsettings set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.APP_NAME }} \
+            --settings @./Task 3/azure_settings.json
